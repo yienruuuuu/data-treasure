@@ -9,6 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * Maps enum-managed task types to their Spring-managed handlers.
+ */
 @Component
 public class ScheduledTaskRegistry {
 

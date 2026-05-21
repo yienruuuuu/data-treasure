@@ -1,8 +1,16 @@
 package io.github.yienruuuuu.common.exception;
 
 import io.github.yienruuuuu.common.error.ErrorCode;
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
+/**
+ * Base runtime exception for expected API failures.
+ *
+ * <p>Controllers should let this exception propagate to {@code GlobalExceptionHandler}
+ * instead of catching it locally.</p>
+ */
+@Getter
 public class ApiException extends RuntimeException {
 
     private final ErrorCode errorCode;
@@ -24,13 +32,5 @@ public class ApiException extends RuntimeException {
         super(message, cause);
         this.errorCode = errorCode;
         this.httpStatus = httpStatus;
-    }
-
-    public ErrorCode getErrorCode() {
-        return errorCode;
-    }
-
-    public HttpStatus getHttpStatus() {
-        return httpStatus;
     }
 }

@@ -5,7 +5,7 @@ import io.github.yienruuuuu.scheduler.dao.ScheduledTaskDao;
 import io.github.yienruuuuu.scheduler.dao.ScheduledTaskErrorDao;
 import io.github.yienruuuuu.scheduler.domain.ScheduledTaskStatus;
 import io.github.yienruuuuu.scheduler.domain.ScheduledTaskType;
-import io.github.yienruuuuu.scheduler.entity.ScheduledTaskEntity;
+import io.github.yienruuuuu.scheduler.bean.po.ScheduledTaskEntity;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;

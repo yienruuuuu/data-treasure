@@ -1,7 +1,7 @@
 package io.github.yienruuuuu.scheduler.dao;
 
 import io.github.yienruuuuu.scheduler.domain.ScheduledTaskStatus;
-import io.github.yienruuuuu.scheduler.entity.ScheduledTaskEntity;
+import io.github.yienruuuuu.scheduler.bean.po.ScheduledTaskEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Persistence access for scheduled task definitions and execution state.
+ */
 public interface ScheduledTaskDao extends JpaRepository<ScheduledTaskEntity, UUID> {
 
     @Query("""
@@ -31,6 +34,10 @@ public interface ScheduledTaskDao extends JpaRepository<ScheduledTaskEntity, UUI
             limit :limit
             for update skip locked
             """, nativeQuery = true)
+    /*
+     * PostgreSQL locking is intentionally native here: SKIP LOCKED lets multiple
+     * application instances claim due work without executing the same row twice.
+     */
     List<ScheduledTaskEntity> findDueTasksForUpdate(@Param("now") Instant now, @Param("limit") int limit);
 
     @Modifying

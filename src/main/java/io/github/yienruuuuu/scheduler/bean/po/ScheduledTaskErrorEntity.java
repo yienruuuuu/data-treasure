@@ -1,4 +1,4 @@
-package io.github.yienruuuuu.scheduler.entity;
+package io.github.yienruuuuu.scheduler.bean.po;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,10 +8,14 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.Instant;
 import java.util.UUID;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "scheduled_task_error")
 public class ScheduledTaskErrorEntity {
@@ -47,53 +51,5 @@ public class ScheduledTaskErrorEntity {
         if (createdAt == null) {
             createdAt = Instant.now();
         }
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public ScheduledTaskEntity getTask() {
-        return task;
-    }
-
-    public void setTask(ScheduledTaskEntity task) {
-        this.task = task;
-    }
-
-    public int getAttempt() {
-        return attempt;
-    }
-
-    public void setAttempt(int attempt) {
-        this.attempt = attempt;
-    }
-
-    public String getErrorType() {
-        return errorType;
-    }
-
-    public void setErrorType(String errorType) {
-        this.errorType = errorType;
-    }
-
-    public String getErrorMessage() {
-        return errorMessage;
-    }
-
-    public void setErrorMessage(String errorMessage) {
-        this.errorMessage = errorMessage;
-    }
-
-    public String getStackTrace() {
-        return stackTrace;
-    }
-
-    public void setStackTrace(String stackTrace) {
-        this.stackTrace = stackTrace;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
     }
 }

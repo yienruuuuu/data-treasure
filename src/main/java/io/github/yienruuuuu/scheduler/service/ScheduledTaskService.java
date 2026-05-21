@@ -7,8 +7,8 @@ import io.github.yienruuuuu.scheduler.dao.ScheduledTaskDao;
 import io.github.yienruuuuu.scheduler.dao.ScheduledTaskErrorDao;
 import io.github.yienruuuuu.scheduler.domain.ScheduledTaskStatus;
 import io.github.yienruuuuu.scheduler.domain.ScheduledTaskType;
-import io.github.yienruuuuu.scheduler.entity.ScheduledTaskEntity;
-import io.github.yienruuuuu.scheduler.entity.ScheduledTaskErrorEntity;
+import io.github.yienruuuuu.scheduler.bean.po.ScheduledTaskEntity;
+import io.github.yienruuuuu.scheduler.bean.po.ScheduledTaskErrorEntity;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +19,9 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Application service for creating, enabling, disabling, and querying scheduled tasks.
+ */
 @Service
 public class ScheduledTaskService {
 

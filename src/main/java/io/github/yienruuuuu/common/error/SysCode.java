@@ -3,6 +3,9 @@ package io.github.yienruuuuu.common.error;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+/**
+ * Common system-level response codes shared by API exception handling.
+ */
 @Getter
 @AllArgsConstructor
 public enum SysCode implements ErrorCode {

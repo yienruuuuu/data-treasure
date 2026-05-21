@@ -1,10 +1,10 @@
 package io.github.yienruuuuu.common.controller;
 
+import io.github.yienruuuuu.common.bean.dto.ApiErrorResponse;
 import io.github.yienruuuuu.common.error.SysCode;
 import io.github.yienruuuuu.common.exception.ApiException;
 import jakarta.validation.ConstraintViolationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -16,10 +16,13 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import java.time.Instant;
 import java.util.stream.Collectors;
 
+/**
+ * Converts API, validation, malformed request, and unexpected errors into a
+ * consistent response shape for all REST controllers.
+ */
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiErrorResponse> handleApiException(ApiException exception) {

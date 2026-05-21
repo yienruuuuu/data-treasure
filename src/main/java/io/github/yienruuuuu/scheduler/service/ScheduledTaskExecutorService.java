@@ -5,10 +5,9 @@ import io.github.yienruuuuu.scheduler.dao.ScheduledTaskErrorDao;
 import io.github.yienruuuuu.scheduler.domain.ScheduledTaskContext;
 import io.github.yienruuuuu.scheduler.domain.ScheduledTaskHandler;
 import io.github.yienruuuuu.scheduler.domain.ScheduledTaskStatus;
-import io.github.yienruuuuu.scheduler.entity.ScheduledTaskEntity;
-import io.github.yienruuuuu.scheduler.entity.ScheduledTaskErrorEntity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.github.yienruuuuu.scheduler.bean.po.ScheduledTaskEntity;
+import io.github.yienruuuuu.scheduler.bean.po.ScheduledTaskErrorEntity;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.support.CronExpression;
@@ -27,10 +26,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Background executor that claims due tasks, invokes handlers, applies retry
+ * rules, and persists execution failures.
+ */
+@Slf4j
 @Service
 public class ScheduledTaskExecutorService {
 
-    private static final Logger log = LoggerFactory.getLogger(ScheduledTaskExecutorService.class);
     private static final ZoneId SCHEDULER_ZONE = ZoneId.of("Asia/Taipei");
     private static final List<Duration> RETRY_DELAYS = List.of(
             Duration.ofMinutes(1),
@@ -73,6 +76,7 @@ public class ScheduledTaskExecutorService {
         Instant now = Instant.now();
         List<ScheduledTaskEntity> tasks = scheduledTaskDao.findDueTasksForUpdate(now, batchSize);
         for (ScheduledTaskEntity task : tasks) {
+            // Keep lock state in the same transaction as the SELECT FOR UPDATE.
             task.setStatus(ScheduledTaskStatus.RUNNING);
             task.setLockOwner(lockOwner);
             task.setLockUntil(now.plus(lockTtl));
@@ -142,6 +146,8 @@ public class ScheduledTaskExecutorService {
             return;
         }
 
+        // Retry is scheduled before the next cron occurrence so transient failures
+        // get a chance to recover quickly without losing the original task.
         task.setStatus(ScheduledTaskStatus.ACTIVE);
         task.setNextRunAt(now.plus(retryDelay(nextAttempt)));
     }
