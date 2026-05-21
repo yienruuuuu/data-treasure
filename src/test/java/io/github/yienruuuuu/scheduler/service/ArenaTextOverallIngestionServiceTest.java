@@ -7,6 +7,7 @@ import io.github.yienruuuuu.scheduler.bean.po.ArenaTextOverallSnapshotEntity;
 import io.github.yienruuuuu.scheduler.dao.ArenaTextOverallItemDao;
 import io.github.yienruuuuu.scheduler.dao.ArenaTextOverallSnapshotDao;
 import io.github.yienruuuuu.scheduler.domain.ArenaCrawlStatus;
+import io.github.yienruuuuu.telegram.service.TelegramNotifyService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -26,7 +27,8 @@ class ArenaTextOverallIngestionServiceTest {
 
     private final ArenaTextOverallSnapshotDao snapshotDao = mock(ArenaTextOverallSnapshotDao.class);
     private final ArenaTextOverallItemDao itemDao = mock(ArenaTextOverallItemDao.class);
-    private final ArenaTextOverallIngestionService service = new ArenaTextOverallIngestionService(snapshotDao, itemDao);
+    private final TelegramNotifyService telegramNotifyService = mock(TelegramNotifyService.class);
+    private final ArenaTextOverallIngestionService service = new ArenaTextOverallIngestionService(snapshotDao, itemDao, telegramNotifyService);
 
     @Test
     void ingestWritesPartialSnapshotWhenFetchedIsLowerThanDeclared() {
@@ -51,6 +53,7 @@ class ArenaTextOverallIngestionServiceTest {
         assertThat(snapshotCaptor.getValue().getCrawlStatus()).isEqualTo(ArenaCrawlStatus.PARTIAL);
         assertThat(snapshotCaptor.getValue().getFetchedModelCount()).isEqualTo(2);
         verify(itemDao).saveAll(any());
+        verify(telegramNotifyService).sendCrawlAnomaly(any());
     }
 
     @Test
@@ -73,6 +76,7 @@ class ArenaTextOverallIngestionServiceTest {
         // then
         verify(snapshotDao, never()).save(any());
         verify(itemDao, never()).saveAll(any());
+        verify(telegramNotifyService, never()).sendCrawlAnomaly(any());
     }
 
     @Test
@@ -95,6 +99,7 @@ class ArenaTextOverallIngestionServiceTest {
                 .hasMessageContaining("zero items");
         verify(snapshotDao, never()).save(any());
         verify(itemDao, never()).saveAll(any());
+        verify(telegramNotifyService, never()).sendCrawlAnomaly(any());
     }
 
     private ArenaTextOverallItemData item(int rank) {

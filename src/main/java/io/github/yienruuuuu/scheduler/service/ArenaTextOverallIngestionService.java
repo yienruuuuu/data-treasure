@@ -9,6 +9,7 @@ import io.github.yienruuuuu.scheduler.bean.po.ArenaTextOverallSnapshotEntity;
 import io.github.yienruuuuu.scheduler.dao.ArenaTextOverallItemDao;
 import io.github.yienruuuuu.scheduler.dao.ArenaTextOverallSnapshotDao;
 import io.github.yienruuuuu.scheduler.domain.ArenaCrawlStatus;
+import io.github.yienruuuuu.telegram.service.TelegramNotifyService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,13 +26,16 @@ public class ArenaTextOverallIngestionService {
 
     private final ArenaTextOverallSnapshotDao snapshotDao;
     private final ArenaTextOverallItemDao itemDao;
+    private final TelegramNotifyService telegramNotifyService;
 
     public ArenaTextOverallIngestionService(
             ArenaTextOverallSnapshotDao snapshotDao,
-            ArenaTextOverallItemDao itemDao
+            ArenaTextOverallItemDao itemDao,
+            TelegramNotifyService telegramNotifyService
     ) {
         this.snapshotDao = snapshotDao;
         this.itemDao = itemDao;
+        this.telegramNotifyService = telegramNotifyService;
     }
 
     @Transactional
@@ -94,6 +98,11 @@ public class ArenaTextOverallIngestionService {
                 context.declaredModelCount(),
                 context.fetchedModelCount()
         );
+        try {
+            telegramNotifyService.sendCrawlAnomaly(context);
+        } catch (Exception exception) {
+            log.error("Failed to send crawl anomaly Telegram notification", exception);
+        }
     }
 
     private ArenaTextOverallItemEntity toEntity(ArenaTextOverallSnapshotEntity snapshot, ArenaTextOverallItemData data) {
