@@ -14,17 +14,17 @@ class ScheduledTaskRegistryTest {
 
     @Test
     void findReturnsHandlerByTaskType() {
-        ScheduledTaskHandler handler = new TestHandler(ScheduledTaskType.DATA_RESEARCH);
+        ScheduledTaskHandler handler = new TestHandler(ScheduledTaskType.ARENA_TEXT_OVERALL_SYNC);
         ScheduledTaskRegistry registry = new ScheduledTaskRegistry(List.of(handler));
 
-        assertThat(registry.find("DATA_RESEARCH")).containsSame(handler);
+        assertThat(registry.find("ARENA_TEXT_OVERALL_SYNC")).containsSame(handler);
         assertThat(registry.find("missing")).isEmpty();
     }
 
     @Test
     void constructorRejectsDuplicateTaskType() {
-        ScheduledTaskHandler first = new TestHandler(ScheduledTaskType.DATA_RESEARCH);
-        ScheduledTaskHandler second = new TestHandler(ScheduledTaskType.DATA_RESEARCH);
+        ScheduledTaskHandler first = new TestHandler(ScheduledTaskType.ARENA_TEXT_OVERALL_SYNC);
+        ScheduledTaskHandler second = new TestHandler(ScheduledTaskType.ARENA_TEXT_OVERALL_SYNC);
 
         assertThatThrownBy(() -> new ScheduledTaskRegistry(List.of(first, second)))
                 .isInstanceOf(IllegalStateException.class)

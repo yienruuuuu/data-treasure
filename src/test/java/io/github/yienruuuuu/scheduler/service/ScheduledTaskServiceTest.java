@@ -23,10 +23,10 @@ class ScheduledTaskServiceTest {
     private final ScheduledTaskService service = new ScheduledTaskService(scheduledTaskDao, scheduledTaskErrorDao);
 
     @Test
-    void createCronTaskRejectsInvalidCronExpression() {
-        assertThatThrownBy(() -> service.createCronTask(ScheduledTaskType.DATA_RESEARCH, "bad cron", "{}", 3))
+    void createCronTaskRejectsInvalidMaxAttempts() {
+        assertThatThrownBy(() -> service.createCronTask(ScheduledTaskType.ARENA_TEXT_OVERALL_SYNC, "{}", 0))
                 .isInstanceOf(BadRequestApiException.class)
-                .hasMessageContaining("Invalid cron expression");
+                .hasMessageContaining("maxAttempts must be greater than 0");
     }
 
     @Test
@@ -37,12 +37,12 @@ class ScheduledTaskServiceTest {
             return task;
         });
 
-        UUID taskId = service.createCronTask(ScheduledTaskType.DATA_RESEARCH, "0 * * * * *", "{}", 3);
+        UUID taskId = service.createCronTask(ScheduledTaskType.ARENA_TEXT_OVERALL_SYNC, "{}", 3);
 
         assertThat(taskId).isNotNull();
         org.mockito.Mockito.verify(scheduledTaskDao).save(org.mockito.Mockito.argThat(task ->
-                task.getTaskType().equals("DATA_RESEARCH")
-                        && task.getCronExpression().equals("0 * * * * *")
+                task.getTaskType().equals("ARENA_TEXT_OVERALL_SYNC")
+                        && task.getCronExpression().equals("0 0 8 * * *")
                         && task.getPayload().equals("{}")
                         && task.getStatus() == ScheduledTaskStatus.ACTIVE
                         && task.getMaxAttempts() == 3

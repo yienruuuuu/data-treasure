@@ -36,7 +36,8 @@ public class ScheduledTaskService {
     }
 
     @Transactional
-    public UUID createCronTask(ScheduledTaskType taskType, String cronExpression, String payload, int maxAttempts) {
+    public UUID createCronTask(ScheduledTaskType taskType, String payload, int maxAttempts) {
+        String cronExpression = taskType.cronExpression();
         if (!CronExpression.isValidExpression(cronExpression)) {
             throw new BadRequestApiException(SysCode.INVALID_ARGUMENT, "Invalid cron expression");
         }

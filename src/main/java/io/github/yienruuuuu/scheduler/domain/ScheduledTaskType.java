@@ -10,7 +10,17 @@ import java.util.Optional;
  * simple while Java code avoids hand-written task type constants.</p>
  */
 public enum ScheduledTaskType {
-    DATA_RESEARCH;
+    ARENA_TEXT_OVERALL_SYNC("0 0 8 * * *");
+
+    private final String cronExpression;
+
+    ScheduledTaskType(String cronExpression) {
+        this.cronExpression = cronExpression;
+    }
+
+    public String cronExpression() {
+        return cronExpression;
+    }
 
     public static Optional<ScheduledTaskType> findByName(String name) {
         return Arrays.stream(values())

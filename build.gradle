@@ -20,6 +20,7 @@ dependencies {
     implementation 'org.postgresql:postgresql:42.7.4'
     implementation 'org.flywaydb:flyway-core:8.5.13'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
+    implementation 'org.jsoup:jsoup:1.18.1'
 
     compileOnly 'org.projectlombok:lombok:1.18.20'
     annotationProcessor 'org.projectlombok:lombok:1.18.20'

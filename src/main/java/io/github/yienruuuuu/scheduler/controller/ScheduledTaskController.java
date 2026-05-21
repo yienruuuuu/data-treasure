@@ -4,6 +4,7 @@ import io.github.yienruuuuu.common.bean.dto.ApiErrorResponse;
 import io.github.yienruuuuu.scheduler.bean.dto.CreateScheduledTaskRequest;
 import io.github.yienruuuuu.scheduler.bean.dto.ScheduledTaskErrorResponse;
 import io.github.yienruuuuu.scheduler.bean.dto.ScheduledTaskResponse;
+import io.github.yienruuuuu.scheduler.domain.ScheduledTaskType;
 import io.github.yienruuuuu.scheduler.service.ScheduledTaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -47,15 +49,15 @@ public class ScheduledTaskController {
             description = """
                     建立一筆持久化排程任務。
                     
-                    任務會依 cronExpression 計算下一次執行時間，並由背景排程器自動 claim 與執行。
-                    taskType 必須是系統已定義的 enum，例如 DATA_RESEARCH。
+                    任務會依 taskType 內建的 cron 設定計算下一次執行時間，並由背景排程器自動 claim 與執行。
+                    taskType 由 query 參數傳入，必須是系統已定義的 enum，例如 ARENA_TEXT_OVERALL_SYNC。
                     payload 為 JSON 字串，實際欄位由對應的 ScheduledTaskHandler 定義。
                     """,
             responses = {
                     @ApiResponse(responseCode = "201", description = "建立成功"),
                     @ApiResponse(
                             responseCode = "400",
-                            description = "請求格式錯誤、cronExpression 無效或 taskType 不存在",
+                            description = "請求格式錯誤或 taskType 不存在",
                             content = @Content(
                                     schema = @Schema(implementation = ApiErrorResponse.class),
                                     examples = @ExampleObject(value = """
@@ -71,11 +73,14 @@ public class ScheduledTaskController {
             }
     )
     @PostMapping
-    public ResponseEntity<ScheduledTaskResponse> create(@Valid @RequestBody CreateScheduledTaskRequest request) {
+    public ResponseEntity<ScheduledTaskResponse> create(
+            @Parameter(description = "任務類型（query 參數）", example = "ARENA_TEXT_OVERALL_SYNC")
+            @RequestParam ScheduledTaskType taskType,
+            @Valid @RequestBody CreateScheduledTaskRequest request
+    ) {
         int maxAttempts = request.maxAttempts() == null ? DEFAULT_MAX_ATTEMPTS : request.maxAttempts();
         UUID taskId = scheduledTaskService.createCronTask(
-                request.taskType(),
-                request.cronExpression(),
+                taskType,
                 request.payload(),
                 maxAttempts
         );

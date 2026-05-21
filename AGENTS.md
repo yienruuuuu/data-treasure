@@ -45,6 +45,9 @@ Design decisions should favor reliable data collection, repeatable processing, t
 - Use Lombok `@Slf4j`.
 - Do not manually declare loggers with `LoggerFactory.getLogger(...)`.
 - Log operationally useful information, especially crawler failures, scheduler execution failures, retry behavior, and data-processing errors.
+- For manually triggered flows (for example `sync-once`), log at least one `INFO` at start and one `INFO` at completion, with key fields such as source URL, updated date, declared count, fetched count, and elapsed time.
+- Add `DEBUG` logs at important internal boundaries (fetch/parse/ingest) to help diagnose data-shape or parsing issues without changing code during incidents.
+- If a branch intentionally skips persistence or retries (for example duplicate snapshot or partial/empty crawl result), log the reason and the decision inputs.
 - Avoid logging sensitive customer data or secrets.
 
 ## Lombok
@@ -108,4 +111,5 @@ Design decisions should favor reliable data collection, repeatable processing, t
 - Follow existing package structure and naming conventions.
 - Avoid unrelated refactors.
 - Preserve Flyway migration history; add new migration files instead of editing applied migrations.
+- When adding or changing database schema, always add both table comments and column comments in migrations.
 - Keep customer-facing data correctness and traceability as primary concerns.
