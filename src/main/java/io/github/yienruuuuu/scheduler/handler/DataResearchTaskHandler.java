@@ -1,4 +1,4 @@
-package io.github.yienruuuuu.scheduler.demo;
+package io.github.yienruuuuu.scheduler.handler;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
