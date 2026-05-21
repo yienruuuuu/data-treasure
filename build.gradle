@@ -36,3 +36,11 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.annotationProcessorPath = configurations.annotationProcessor
 }
+
+jar {
+    archiveFileName = 'data_treasure.jar'
+}
+
+bootJar {
+    archiveFileName = 'data_treasure.jar'
+}
