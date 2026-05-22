@@ -10,7 +10,8 @@ import java.util.Optional;
  * simple while Java code avoids hand-written task type constants.</p>
  */
 public enum ScheduledTaskType {
-    ARENA_TEXT_OVERALL_SYNC("0 0 8 * * *");
+    ARENA_TEXT_OVERALL_SYNC("0 0 8 * * *"),
+    XTRACKER_PERSON_POST_SYNC("0 */10 * * * *");
 
     private final String cronExpression;
 

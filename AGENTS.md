@@ -110,6 +110,7 @@ Design decisions should favor reliable data collection, repeatable processing, t
 - Keep changes scoped to the requested behavior.
 - Follow existing package structure and naming conventions.
 - Avoid unrelated refactors.
+- For crawler-style features, first use the agent/tooling to call the target source API or page directly before coding. Confirm the real HTTP behavior, required parameters, TLS/certificate behavior, headers, status codes, pagination, and response shape, then implement Java code from those observed facts instead of guessing from docs alone.
 - Preserve Flyway migration history; add new migration files instead of editing applied migrations.
 - When adding or changing database schema, always add both table comments and column comments in migrations.
 - Keep customer-facing data correctness and traceability as primary concerns.
