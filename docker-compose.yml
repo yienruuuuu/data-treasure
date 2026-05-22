@@ -23,16 +23,21 @@ services:
     env_file:
       - .env
     environment:
+      TZ: Asia/Taipei
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Taipei
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/data_treasure
       SPRING_DATASOURCE_USERNAME: data_treasure
       SPRING_DATASOURCE_PASSWORD: data_treasure_password
       SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/data_treasure
       SPRING_FLYWAY_USER: data_treasure
       SPRING_FLYWAY_PASSWORD: data_treasure_password
+      LOG_PATH: /app/logs
       BOT_TOKEN: ${BOT_TOKEN:-}
       DEFAULT_CHAT_ID: ${DEFAULT_CHAT_ID:-}
     ports:
       - "8080:8080"
+    volumes:
+      - ./logs:/app/logs
     depends_on:
       - postgres
 
