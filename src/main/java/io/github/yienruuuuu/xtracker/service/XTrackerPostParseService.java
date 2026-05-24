@@ -63,8 +63,11 @@ public class XTrackerPostParseService {
     }
 
     private XTrackerPostData parsePost(JsonNode node, String handle) {
-        String sourcePostId = firstText(node, "id", "postId", "post_id", "tweetId", "tweet_id", "sourcePostId");
+        String trackerPostId = firstText(node, "id");
+        String platformPostId = firstText(node, "platformId", "postId", "post_id", "tweetId", "tweet_id", "sourcePostId");
+        String sourcePostId = platformPostId == null ? trackerPostId : platformPostId;
         Instant postedAt = firstInstant(node, "postedAt", "posted_at", "createdAt", "created_at", "timestamp", "time", "date");
+        Instant importedAt = firstInstant(node, "importedAt", "imported_at");
         if (sourcePostId == null || postedAt == null) {
             log.debug("Skip XTracker post without id or posted time. id={}, postedAt={}", sourcePostId, postedAt);
             return null;
@@ -74,7 +77,7 @@ public class XTrackerPostParseService {
         if (postUrl == null || postUrl.isBlank()) {
             postUrl = "https://x.com/" + handle + "/status/" + sourcePostId;
         }
-        return new XTrackerPostData(sourcePostId, postedAt, text, postUrl, node);
+        return new XTrackerPostData(sourcePostId, trackerPostId, platformPostId, postedAt, importedAt, text, postUrl, node);
     }
 
     private String firstText(JsonNode node, String... fields) {

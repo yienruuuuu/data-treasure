@@ -70,6 +70,7 @@ class XTrackerPersonSyncServiceTest {
         });
         when(parseService.parsePosts(fetchResult.responseBody(), "X", "elonmusk"))
                 .thenReturn(List.of(post("123", "hello")));
+        when(postDao.findByPersonIdAndPlatformPostId(any(UUID.class), eq("123"))).thenReturn(Optional.empty());
         when(postDao.findByPersonIdAndSourcePostId(any(UUID.class), eq("123"))).thenReturn(Optional.empty());
 
         // when
@@ -80,7 +81,10 @@ class XTrackerPersonSyncServiceTest {
         assertThat(response.rawSnapshotCreated()).isTrue();
         assertThat(response.postsFetched()).isEqualTo(1);
         assertThat(response.postsInserted()).isEqualTo(1);
-        verify(rawSnapshotDao).save(any(XTrackerRawApiSnapshotEntity.class));
+        ArgumentCaptor<XTrackerRawApiSnapshotEntity> rawCaptor = ArgumentCaptor.forClass(XTrackerRawApiSnapshotEntity.class);
+        verify(rawSnapshotDao).save(rawCaptor.capture());
+        assertThat(rawCaptor.getValue().getRequestUrl())
+                .isEqualTo("https://xtracker.polymarket.com/api/users/elonmusk/posts?platform=X");
         verify(postDao).save(any(XTrackerCrawledPostEntity.class));
     }
 
@@ -134,7 +138,7 @@ class XTrackerPersonSyncServiceTest {
         existing.setPostedAt(Instant.parse("2026-05-21T00:00:00Z"));
         existing.setText("old text");
         existing.setContentHash("old-hash");
-        when(postDao.findByPersonIdAndSourcePostId(person.getId(), "123")).thenReturn(Optional.of(existing));
+        when(postDao.findByPersonIdAndPlatformPostId(person.getId(), "123")).thenReturn(Optional.of(existing));
 
         // when
         XTrackerManualSyncResponse response = service.syncOnce("X", "elonmusk", false);
@@ -149,6 +153,7 @@ class XTrackerPersonSyncServiceTest {
     private XTrackerPostsFetchResult fetchResult(String rawBody) throws Exception {
         return new XTrackerPostsFetchResult(
                 "/users/elonmusk/posts",
+                "https://xtracker.polymarket.com/api/users/elonmusk/posts?platform=X",
                 "X",
                 "elonmusk",
                 "X:elonmusk:start=:end=:timezone=",
@@ -162,7 +167,10 @@ class XTrackerPersonSyncServiceTest {
     private XTrackerPostData post(String sourcePostId, String text) throws Exception {
         return new XTrackerPostData(
                 sourcePostId,
+                "tracker-" + sourcePostId,
+                sourcePostId,
                 Instant.parse("2026-05-21T00:15:00Z"),
+                Instant.parse("2026-05-21T00:16:00Z"),
                 text,
                 "https://x.com/elonmusk/status/" + sourcePostId,
                 objectMapper.readTree("{\"id\":\"" + sourcePostId + "\",\"text\":\"" + text + "\"}")

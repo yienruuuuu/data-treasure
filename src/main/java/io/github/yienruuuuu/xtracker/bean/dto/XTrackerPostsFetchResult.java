@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 public record XTrackerPostsFetchResult(
         String endpoint,
+        String requestUrl,
         String platform,
         String handle,
         String sourceObjectId,

@@ -71,7 +71,7 @@ public class XTrackerFetchService {
         if (options.endDate() != null) {
             builder.queryParam("endDate", options.endDate());
         }
-        if (options.timezone() != null && !options.timezone().isBlank()) {
+        if (options.shouldForwardTimezone()) {
             builder.queryParam("timezone", options.timezone().trim());
         }
         String url = builder.toUriString();
@@ -101,6 +101,7 @@ public class XTrackerFetchService {
                     platform, normalizedHandle, response.getStatusCode().value(), response.getBody().length());
             return new XTrackerPostsFetchResult(
                     endpoint,
+                    url,
                     platform,
                     normalizedHandle,
                     options.sourceObjectId(platform, normalizedHandle),

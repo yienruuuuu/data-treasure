@@ -24,6 +24,8 @@ public interface ScheduledTaskDao extends JpaRepository<ScheduledTaskEntity, UUI
             """)
     Optional<ScheduledTaskEntity> findTaskById(@Param("id") UUID id);
 
+    Optional<ScheduledTaskEntity> findFirstByTaskTypeAndPayloadOrderByCreatedAtDesc(String taskType, String payload);
+
     @Query(value = """
             select *
             from scheduled_task

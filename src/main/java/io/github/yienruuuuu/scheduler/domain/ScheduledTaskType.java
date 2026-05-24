@@ -11,7 +11,9 @@ import java.util.Optional;
  */
 public enum ScheduledTaskType {
     ARENA_TEXT_OVERALL_SYNC("0 0 8 * * *"),
-    XTRACKER_PERSON_POST_SYNC("0 */10 * * * *");
+    XTRACKER_PERSON_POST_SYNC("0 */10 * * * *"),
+    XTRACKER_PERSON_POST_BACKFILL_WORKER("*/10 * * * * *"),
+    XTRACKER_PERSON_POST_REALTIME_SYNC("0 */5 * * * *");
 
     private final String cronExpression;
 

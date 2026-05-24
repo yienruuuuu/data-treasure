@@ -21,7 +21,7 @@ public record XTrackerSyncOptions(
         if (endDate != null) {
             node.put("endDate", endDate.toString());
         }
-        if (timezone != null && !timezone.isBlank()) {
+        if (shouldForwardTimezone()) {
             node.put("timezone", timezone.trim());
         }
         return node;
@@ -31,6 +31,10 @@ public record XTrackerSyncOptions(
         return platform + ":" + handle
                 + ":start=" + (startDate == null ? "" : startDate)
                 + ":end=" + (endDate == null ? "" : endDate)
-                + ":timezone=" + (timezone == null ? "" : timezone.trim());
+                + ":timezone=" + (shouldForwardTimezone() ? timezone.trim() : "");
+    }
+
+    public boolean shouldForwardTimezone() {
+        return startDate == null && endDate == null && timezone != null && !timezone.isBlank();
     }
 }

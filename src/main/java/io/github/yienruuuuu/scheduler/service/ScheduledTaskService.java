@@ -37,6 +37,11 @@ public class ScheduledTaskService {
 
     @Transactional
     public UUID createCronTask(ScheduledTaskType taskType, String payload, int maxAttempts) {
+        return createCronTask(taskType, payload, maxAttempts, ScheduledTaskStatus.ACTIVE);
+    }
+
+    @Transactional
+    public UUID createCronTask(ScheduledTaskType taskType, String payload, int maxAttempts, ScheduledTaskStatus status) {
         String cronExpression = taskType.cronExpression();
         if (!CronExpression.isValidExpression(cronExpression)) {
             throw new BadRequestApiException(SysCode.INVALID_ARGUMENT, "Invalid cron expression");
@@ -49,12 +54,28 @@ public class ScheduledTaskService {
         task.setTaskType(taskType.name());
         task.setCronExpression(cronExpression);
         task.setPayload(payload);
-        task.setStatus(ScheduledTaskStatus.ACTIVE);
+        task.setStatus(status);
         task.setNextRunAt(nextRunAt(cronExpression, Instant.now()));
         task.setAttempt(0);
         task.setMaxAttempts(maxAttempts);
 
         return scheduledTaskDao.save(task).getId();
+    }
+
+    @Transactional
+    public UUID ensureCronTask(ScheduledTaskType taskType, String payload, int maxAttempts, ScheduledTaskStatus status) {
+        return scheduledTaskDao.findFirstByTaskTypeAndPayloadOrderByCreatedAtDesc(taskType.name(), payload)
+                .map(task -> {
+                    if ((task.getStatus() == ScheduledTaskStatus.DISABLED || task.getStatus() == ScheduledTaskStatus.FAILED)
+                            && status == ScheduledTaskStatus.ACTIVE) {
+                        task.setStatus(ScheduledTaskStatus.ACTIVE);
+                        task.setAttempt(0);
+                        task.setLockOwner(null);
+                        task.setLockUntil(null);
+                    }
+                    return task.getId();
+                })
+                .orElseGet(() -> createCronTask(taskType, payload, maxAttempts, status));
     }
 
     @Transactional

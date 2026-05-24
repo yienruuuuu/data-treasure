@@ -6,7 +6,10 @@ import java.time.Instant;
 
 public record XTrackerPostData(
         String sourcePostId,
+        String trackerPostId,
+        String platformPostId,
         Instant postedAt,
+        Instant importedAt,
         String text,
         String postUrl,
         JsonNode rawPost

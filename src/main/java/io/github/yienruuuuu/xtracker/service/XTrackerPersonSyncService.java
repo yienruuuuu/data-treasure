@@ -169,6 +169,7 @@ public class XTrackerPersonSyncService {
         entity.setSourceObjectType(PERSON_POSTS_OBJECT_TYPE);
         entity.setSourceObjectId(sourceObjectId);
         entity.setRequestParams(fetchResult.requestParams());
+        entity.setRequestUrl(fetchResult.requestUrl());
         entity.setHttpStatus(fetchResult.httpStatus());
         entity.setResponseHash(responseHash);
         entity.setResponseBody(fetchResult.responseBody());
@@ -185,10 +186,7 @@ public class XTrackerPersonSyncService {
         int updated = 0;
         for (XTrackerPostData post : posts) {
             String contentHash = normalizedPostHash(post);
-            Optional<XTrackerCrawledPostEntity> existing = postDao.findByPersonIdAndSourcePostId(
-                    person.getId(),
-                    post.sourcePostId()
-            );
+            Optional<XTrackerCrawledPostEntity> existing = findExistingPost(person, post);
             if (existing.isEmpty()) {
                 postDao.save(toEntity(person, rawSnapshot, post, contentHash));
                 inserted++;
@@ -197,6 +195,9 @@ public class XTrackerPersonSyncService {
             XTrackerCrawledPostEntity entity = existing.get();
             if (!entity.getContentHash().equals(contentHash)) {
                 entity.setPostedAt(post.postedAt());
+                entity.setTrackerPostId(post.trackerPostId());
+                entity.setPlatformPostId(post.platformPostId());
+                entity.setImportedAt(post.importedAt());
                 entity.setText(post.text());
                 entity.setPostUrl(post.postUrl());
                 entity.setRawSnapshot(rawSnapshot);
@@ -208,6 +209,19 @@ public class XTrackerPersonSyncService {
         return new PostIngestionResult(inserted, updated);
     }
 
+    private Optional<XTrackerCrawledPostEntity> findExistingPost(XTrackerCrawledPersonEntity person, XTrackerPostData post) {
+        if (post.platformPostId() != null && !post.platformPostId().isBlank()) {
+            Optional<XTrackerCrawledPostEntity> byPlatformPostId = postDao.findByPersonIdAndPlatformPostId(
+                    person.getId(),
+                    post.platformPostId()
+            );
+            if (byPlatformPostId.isPresent()) {
+                return byPlatformPostId;
+            }
+        }
+        return postDao.findByPersonIdAndSourcePostId(person.getId(), post.sourcePostId());
+    }
+
     private XTrackerCrawledPostEntity toEntity(
             XTrackerCrawledPersonEntity person,
             XTrackerRawApiSnapshotEntity rawSnapshot,
@@ -217,7 +231,10 @@ public class XTrackerPersonSyncService {
         XTrackerCrawledPostEntity entity = new XTrackerCrawledPostEntity();
         entity.setPerson(person);
         entity.setSourcePostId(post.sourcePostId());
+        entity.setTrackerPostId(post.trackerPostId());
+        entity.setPlatformPostId(post.platformPostId());
         entity.setPostedAt(post.postedAt());
+        entity.setImportedAt(post.importedAt());
         entity.setText(post.text());
         entity.setPostUrl(post.postUrl());
         entity.setRawSnapshot(rawSnapshot);
@@ -228,7 +245,10 @@ public class XTrackerPersonSyncService {
     private String normalizedPostHash(XTrackerPostData post) {
         JsonNode rawPost = post.rawPost();
         String source = post.sourcePostId()
+                + "|" + (post.trackerPostId() == null ? "" : post.trackerPostId())
+                + "|" + (post.platformPostId() == null ? "" : post.platformPostId())
                 + "|" + post.postedAt()
+                + "|" + (post.importedAt() == null ? "" : post.importedAt())
                 + "|" + (post.text() == null ? "" : post.text())
                 + "|" + (post.postUrl() == null ? "" : post.postUrl())
                 + "|" + (rawPost == null ? "" : rawPost.toString());

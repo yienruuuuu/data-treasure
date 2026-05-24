@@ -12,7 +12,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -44,6 +45,7 @@ public class ScheduledTaskExecutorService {
     private final ScheduledTaskDao scheduledTaskDao;
     private final ScheduledTaskErrorDao scheduledTaskErrorDao;
     private final ScheduledTaskRegistry scheduledTaskRegistry;
+    private final TransactionTemplate transactionTemplate;
     private final int batchSize;
     private final Duration lockTtl;
     private final String lockOwner;
@@ -52,12 +54,14 @@ public class ScheduledTaskExecutorService {
             ScheduledTaskDao scheduledTaskDao,
             ScheduledTaskErrorDao scheduledTaskErrorDao,
             ScheduledTaskRegistry scheduledTaskRegistry,
+            PlatformTransactionManager transactionManager,
             @Value("${scheduler.task.batch-size:10}") int batchSize,
             @Value("${scheduler.task.lock-ttl:PT5M}") Duration lockTtl
     ) {
         this.scheduledTaskDao = scheduledTaskDao;
         this.scheduledTaskErrorDao = scheduledTaskErrorDao;
         this.scheduledTaskRegistry = scheduledTaskRegistry;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.batchSize = batchSize;
         this.lockTtl = lockTtl;
         this.lockOwner = resolveLockOwner();
@@ -71,18 +75,19 @@ public class ScheduledTaskExecutorService {
         }
     }
 
-    @Transactional
     public List<ScheduledTaskEntity> claimDueTasks() {
-        Instant now = Instant.now();
-        List<ScheduledTaskEntity> tasks = scheduledTaskDao.findDueTasksForUpdate(now, batchSize);
-        for (ScheduledTaskEntity task : tasks) {
-            // Keep lock state in the same transaction as the SELECT FOR UPDATE.
-            task.setStatus(ScheduledTaskStatus.RUNNING);
-            task.setLockOwner(lockOwner);
-            task.setLockUntil(now.plus(lockTtl));
-            task.setLastStartedAt(now);
-        }
-        return tasks;
+        return transactionTemplate.execute(status -> {
+            Instant now = Instant.now();
+            List<ScheduledTaskEntity> tasks = scheduledTaskDao.findDueTasksForUpdate(now, batchSize);
+            for (ScheduledTaskEntity task : tasks) {
+                // Keep lock state in the same transaction as the SELECT FOR UPDATE.
+                task.setStatus(ScheduledTaskStatus.RUNNING);
+                task.setLockOwner(lockOwner);
+                task.setLockUntil(now.plus(lockTtl));
+                task.setLastStartedAt(now);
+            }
+            return tasks;
+        });
     }
 
     void executeTask(ScheduledTaskEntity task) {
@@ -108,48 +113,52 @@ public class ScheduledTaskExecutorService {
         }
     }
 
-    @Transactional
     public void markSucceeded(UUID taskId) {
-        ScheduledTaskEntity task = scheduledTaskDao.findTaskById(taskId)
-                .orElseThrow(() -> new IllegalStateException("Claimed task disappeared: " + taskId));
-        Instant now = Instant.now();
-        task.setStatus(ScheduledTaskStatus.ACTIVE);
-        task.setAttempt(0);
-        task.setNextRunAt(nextRunAt(task.getCronExpression(), now));
-        task.setLockOwner(null);
-        task.setLockUntil(null);
-        task.setLastFinishedAt(now);
+        transactionTemplate.executeWithoutResult(status -> {
+            ScheduledTaskEntity task = scheduledTaskDao.findTaskById(taskId)
+                    .orElseThrow(() -> new IllegalStateException("Claimed task disappeared: " + taskId));
+            Instant now = Instant.now();
+            if (task.getStatus() != ScheduledTaskStatus.DISABLED) {
+                task.setStatus(ScheduledTaskStatus.ACTIVE);
+                task.setNextRunAt(nextRunAt(task.getCronExpression(), now));
+            }
+            task.setAttempt(0);
+            task.setLockOwner(null);
+            task.setLockUntil(null);
+            task.setLastFinishedAt(now);
+        });
     }
 
-    @Transactional
     public void markFailed(UUID taskId, Exception exception, boolean retryable) {
-        ScheduledTaskEntity task = scheduledTaskDao.findTaskById(taskId)
-                .orElseThrow(() -> new IllegalStateException("Claimed task disappeared: " + taskId));
-        int nextAttempt = task.getAttempt() + 1;
-        Instant now = Instant.now();
+        transactionTemplate.executeWithoutResult(status -> {
+            ScheduledTaskEntity task = scheduledTaskDao.findTaskById(taskId)
+                    .orElseThrow(() -> new IllegalStateException("Claimed task disappeared: " + taskId));
+            int nextAttempt = task.getAttempt() + 1;
+            Instant now = Instant.now();
 
-        ScheduledTaskErrorEntity error = new ScheduledTaskErrorEntity();
-        error.setTask(task);
-        error.setAttempt(nextAttempt);
-        error.setErrorType(exception.getClass().getName());
-        error.setErrorMessage(exception.getMessage());
-        error.setStackTrace(stackTraceOf(exception));
-        scheduledTaskErrorDao.save(error);
+            ScheduledTaskErrorEntity error = new ScheduledTaskErrorEntity();
+            error.setTask(task);
+            error.setAttempt(nextAttempt);
+            error.setErrorType(exception.getClass().getName());
+            error.setErrorMessage(exception.getMessage());
+            error.setStackTrace(stackTraceOf(exception));
+            scheduledTaskErrorDao.save(error);
 
-        task.setAttempt(nextAttempt);
-        task.setLockOwner(null);
-        task.setLockUntil(null);
-        task.setLastFinishedAt(now);
+            task.setAttempt(nextAttempt);
+            task.setLockOwner(null);
+            task.setLockUntil(null);
+            task.setLastFinishedAt(now);
 
-        if (!retryable || nextAttempt >= task.getMaxAttempts()) {
-            task.setStatus(ScheduledTaskStatus.FAILED);
-            return;
-        }
+            if (!retryable || nextAttempt >= task.getMaxAttempts()) {
+                task.setStatus(ScheduledTaskStatus.FAILED);
+                return;
+            }
 
-        // Retry is scheduled before the next cron occurrence so transient failures
-        // get a chance to recover quickly without losing the original task.
-        task.setStatus(ScheduledTaskStatus.ACTIVE);
-        task.setNextRunAt(now.plus(retryDelay(nextAttempt)));
+            // Retry is scheduled before the next cron occurrence so transient failures
+            // get a chance to recover quickly without losing the original task.
+            task.setStatus(ScheduledTaskStatus.ACTIVE);
+            task.setNextRunAt(now.plus(retryDelay(nextAttempt)));
+        });
     }
 
     private Instant nextRunAt(String cronExpression, Instant from) {

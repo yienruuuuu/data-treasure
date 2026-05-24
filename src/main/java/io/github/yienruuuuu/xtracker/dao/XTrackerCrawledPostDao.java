@@ -13,6 +13,8 @@ public interface XTrackerCrawledPostDao extends JpaRepository<XTrackerCrawledPos
 
     Optional<XTrackerCrawledPostEntity> findByPersonIdAndSourcePostId(UUID personId, String sourcePostId);
 
+    Optional<XTrackerCrawledPostEntity> findByPersonIdAndPlatformPostId(UUID personId, String platformPostId);
+
     @Query("""
             select count(post)
             from XTrackerCrawledPostEntity post

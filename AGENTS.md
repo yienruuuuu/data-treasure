@@ -31,6 +31,15 @@ Design decisions should favor reliable data collection, repeatable processing, t
 - For scheduler task claiming, PostgreSQL-native locking such as `FOR UPDATE SKIP LOCKED` is acceptable.
 - Keep native SQL localized inside DAO classes.
 
+## Transaction Boundaries
+
+- Be careful with Spring `@Transactional` self-invocation: methods called from the same class do not go through the Spring proxy, so their `@Transactional` annotation will not take effect.
+- For workflows that claim work, call external APIs, then update execution state, do not wrap the external API call in a long transaction.
+- Prefer short, explicit persistence transactions for state changes by moving transactional updates into a separate injected service bean or using `TransactionTemplate`.
+- Avoid relying on self-injection unless there is a clear reason and the code comments explain why it is used.
+- When changing scheduler, backfill, retry, crawler state machines, or lock/claim flows, verify that status, lock fields, attempts, `nextRunAt`, and completion timestamps are actually persisted.
+- After fixing any `@Transactional` self-invocation bug, search the touched workflow for the same pattern and fix all affected state transitions together to avoid repeated claim loops.
+
 ## Exception Handling
 
 - API-facing errors must use `ApiException` or subclasses.
@@ -88,6 +97,7 @@ Design decisions should favor reliable data collection, repeatable processing, t
 - Handler implementations should focus on one specific business task.
 - The scheduler executor is responsible for claiming tasks, running handlers, applying retry rules, and recording failures.
 - DB locking must prevent duplicate execution across multiple application instances.
+- Scheduler and backfill state transitions must be persisted inside an effective transaction; do not rely on `@Transactional` methods invoked from the same class.
 
 ## Testing
 

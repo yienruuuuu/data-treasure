@@ -37,6 +37,9 @@ public class XTrackerRawApiSnapshotEntity {
     @Column(name = "request_params")
     private JsonNode requestParams;
 
+    @Column(name = "request_url", columnDefinition = "text")
+    private String requestUrl;
+
     @Column(name = "http_status", nullable = false)
     private int httpStatus;
 

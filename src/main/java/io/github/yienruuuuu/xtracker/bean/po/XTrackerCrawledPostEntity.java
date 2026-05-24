@@ -32,8 +32,17 @@ public class XTrackerCrawledPostEntity {
     @Column(name = "source_post_id", nullable = false, length = 128)
     private String sourcePostId;
 
+    @Column(name = "tracker_post_id", length = 128)
+    private String trackerPostId;
+
+    @Column(name = "platform_post_id", length = 128)
+    private String platformPostId;
+
     @Column(name = "posted_at", nullable = false)
     private Instant postedAt;
+
+    @Column(name = "imported_at")
+    private Instant importedAt;
 
     @Column(name = "text")
     private String text;

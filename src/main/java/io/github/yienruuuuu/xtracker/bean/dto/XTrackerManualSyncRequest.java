@@ -17,7 +17,7 @@ public record XTrackerManualSyncRequest(
         @Schema(description = "抓取結束時間，不含此時間", example = "2026-05-22T04:00:00Z")
         Instant endDate,
 
-        @Schema(description = "日期解讀時區，XTracker 支援 EST", example = "EST")
+        @Schema(description = "日期解讀時區。startDate 或 endDate 使用絕對時間時不會轉傳給 XTracker。", example = "EST")
         String timezone
 ) {
 }
