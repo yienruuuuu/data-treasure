@@ -1,8 +1,12 @@
 package io.github.yienruuuuu.xtracker.controller;
 
-import io.github.yienruuuuu.common.error.SysCode;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.yienruuuuu.common.bean.dto.ApiErrorResponse;
+import io.github.yienruuuuu.common.error.SysCode;
 import io.github.yienruuuuu.common.exception.BadRequestApiException;
+import io.github.yienruuuuu.common.exception.InternalApiException;
+import io.github.yienruuuuu.xtracker.bean.dto.XTrackerActivityTrendResponse;
 import io.github.yienruuuuu.xtracker.bean.dto.XTrackerManualSyncRequest;
 import io.github.yienruuuuu.xtracker.bean.dto.XTrackerManualSyncResponse;
 import io.github.yienruuuuu.xtracker.bean.dto.XTrackerPostCountResponse;
@@ -17,18 +21,26 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
+import java.util.HexFormat;
 
 /**
  * Manual endpoints for XTracker person crawler operations.
@@ -39,12 +51,20 @@ import java.time.format.DateTimeParseException;
 @RequestMapping("/api/xtracker/persons")
 public class XTrackerPersonController {
 
+    private static final String PUBLIC_ACTIVITY_TREND_CACHE_CONTROL = "public, max-age=60, stale-while-revalidate=240";
+
     private final XTrackerPersonSyncService syncService;
     private final XTrackerPostQueryService queryService;
+    private final ObjectMapper objectMapper;
 
-    public XTrackerPersonController(XTrackerPersonSyncService syncService, XTrackerPostQueryService queryService) {
+    public XTrackerPersonController(
+            XTrackerPersonSyncService syncService,
+            XTrackerPostQueryService queryService,
+            ObjectMapper objectMapper
+    ) {
         this.syncService = syncService;
         this.queryService = queryService;
+        this.objectMapper = objectMapper;
     }
 
     @Operation(
@@ -142,6 +162,40 @@ public class XTrackerPersonController {
         );
     }
 
+    @Operation(
+            summary = "查詢預設人物發文量與累積趨勢",
+            description = "提供公開 PolyTracker Current 圖表使用。Request/response 時間皆為 UTC Instant，前端瀏覽器負責轉成美東時間顯示。",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "查詢成功"),
+                    @ApiResponse(responseCode = "304", description = "資料未變更"),
+                    @ApiResponse(responseCode = "400", description = "參數錯誤",
+                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "404", description = "找不到人物",
+                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+            }
+    )
+    @GetMapping("/tracked/{trackedPerson}/posts/activity-trend")
+    public ResponseEntity<XTrackerActivityTrendResponse> getTrackedPersonActivityTrend(
+            @PathVariable XTrackerTrackedPerson trackedPerson,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startAt,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endAt,
+            @RequestParam(required = false) String bucket,
+            @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch
+    ) {
+        XTrackerActivityTrendResponse response = queryService.getActivityTrend(trackedPerson, startAt, endAt, bucket);
+        String etag = etag(response);
+        if (etag.equals(ifNoneMatch)) {
+            return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
+                    .header(HttpHeaders.CACHE_CONTROL, PUBLIC_ACTIVITY_TREND_CACHE_CONTROL)
+                    .header(HttpHeaders.ETAG, etag)
+                    .build();
+        }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, PUBLIC_ACTIVITY_TREND_CACHE_CONTROL)
+                .header(HttpHeaders.ETAG, etag)
+                .body(response);
+    }
+
     private XTrackerSyncOptions toOptions(XTrackerManualSyncRequest request) {
         if (request == null) {
             return new XTrackerSyncOptions(false, null, null, null);
@@ -169,6 +223,16 @@ public class XTrackerPersonController {
                     SysCode.INVALID_ARGUMENT,
                     fieldName + " must be an ISO instant or UTC date, e.g. 2026-05-19 or 2026-05-19T00:00:00Z"
             );
+        }
+    }
+
+    private String etag(XTrackerActivityTrendResponse response) {
+        try {
+            byte[] payload = objectMapper.writeValueAsBytes(response);
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return "\"" + HexFormat.of().formatHex(digest.digest(payload)) + "\"";
+        } catch (JsonProcessingException | NoSuchAlgorithmException exception) {
+            throw new InternalApiException(SysCode.INTERNAL_ERROR, "Failed to calculate activity trend ETag", exception);
         }
     }
 }
